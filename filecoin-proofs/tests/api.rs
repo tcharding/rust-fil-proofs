@@ -96,6 +96,42 @@ fn test_winning_post_32kib_top_8_8_2() -> Result<()> {
     winning_post::<SectorShape32KiB>(SECTOR_SIZE_32_KIB)
 }
 
+#[test]
+fn test_winning_post_empty_sector_challenge() -> Result<()> {
+    let sector_size = SECTOR_SIZE_2_KIB;
+    let rng = &mut XorShiftRng::from_seed(TEST_SEED);
+
+    let prover_fr: DefaultTreeDomain = Fr::random(rng).into();
+    let mut prover_id = [0u8; 32];
+    prover_id.copy_from_slice(AsRef::<[u8]>::as_ref(&prover_fr));
+
+    let (_, _, _, _) = create_seal::<_, Tree>(rng, sector_size, prover_id, true)?;
+    let sector_count = 0;
+
+    let random_fr: DefaultTreeDomain = Fr::random(rng).into();
+    let mut randomness = [0u8; 32];
+    randomness.copy_from_slice(AsRef::<[u8]>::as_ref(&random_fr));
+
+    let config = PoStConfig {
+        sector_size: sector_size.into(),
+        sector_count,
+        challenge_count: WINNING_POST_CHALLENGE_COUNT,
+        typ: PoStType::Winning,
+        priority: false,
+    };
+
+    // This is supposed to fail, so we invert the results here.
+    match generate_winning_post_sector_challenge::<Tree>(
+        &config,
+        &randomness,
+        sector_count as u64,
+        prover_id,
+    ) {
+        Ok(_x) => panic!("test failed"),
+        Err(_x) => Ok(()),
+    }
+}
+
 fn winning_post<Tree: 'static + MerkleTreeTrait>(sector_size: u64) -> Result<()> {
     let rng = &mut XorShiftRng::from_seed(TEST_SEED);
 
